@@ -17,7 +17,15 @@ return {
 		local lspconfig = require("lspconfig")
 		local capabilities = require("blink.cmp").get_lsp_capabilities()
 
-		lspconfig.lua_ls.setup({ capabilities = capabilities })
-		lspconfig.terraformls.setup({ capabilities = capabilities })
+		local opts = { capabilities = capabilities }
+		local servers = {
+			ts_ls = opts,
+			lua_ls = opts,
+			terraformls = opts,
+		}
+
+		for lsp, opts in pairs(servers) do
+			lspconfig[lsp].setup(opts)
+		end
 	end,
 }
