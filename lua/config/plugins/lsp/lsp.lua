@@ -27,5 +27,18 @@ return {
 		for lsp, opts in pairs(servers) do
 			lspconfig[lsp].setup(opts)
 		end
+
+		-- keymap setup :)
+		vim.keymap.set("n", "gR", "<cmd>Telescope lsp_references<CR>", { desc = "LSP references" })
+		vim.keymap.set("n", "gD", vim.lsp.buf.declaration, { desc = "Go to declaration" })
+		vim.keymap.set("n", "gd", "<cmd>Telescope lsp_definitions<CR>", { desc = "LSP definitions" })
+		vim.keymap.set("n", "gi", "<cmd>Telescope lsp_implementations<CR>", { desc = "LSP implementations" })
+		vim.keymap.set("n", "gt", "<cmd>Telescope lsp_type_definitions<CR>", { desc = "LSP type definitions" })
+		vim.keymap.set({ "n", "v" }, "<leader>ca", vim.lsp.buf.code_action, { desc = "Available code actions" }) -- in visual mode will apply to selection
+		vim.keymap.set("n", "<leader>rn", vim.lsp.buf.rename, { desc = "Rename" })
+		vim.keymap.set("n", "<leader>D", "<cmd>Telescope diagnostics bufnr=0<CR>", { desc = "Buffer diagnostics" })
+		vim.keymap.set("n", "<leader>d", vim.diagnostic.open_float, { desc = "Line diagnostics" })
+		vim.keymap.set("n", "K", vim.lsp.buf.hover, { desc = "Documentation" })
+		vim.keymap.set("n", "<leader>rs", ":LspRestart<CR>", { desc = "Restart LSP" })
 	end,
 }
