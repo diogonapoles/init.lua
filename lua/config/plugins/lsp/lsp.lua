@@ -19,6 +19,8 @@ return {
 
 		local opts = { capabilities = capabilities }
 		local servers = {
+			eslint = opts,
+			tailwindcss = opts,
 			ts_ls = opts,
 			lua_ls = opts,
 			terraformls = opts,
