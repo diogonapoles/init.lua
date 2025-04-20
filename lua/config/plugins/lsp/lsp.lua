@@ -2,6 +2,8 @@ return {
 	"neovim/nvim-lspconfig",
 	dependencies = {
 		"blink.cmp",
+		"williamboman/mason.nvim",
+		"williamboman/mason-lspconfig.nvim",
 		{
 			"folke/lazydev.nvim",
 			ft = "lua", -- only load on lua files
@@ -14,9 +16,7 @@ return {
 	},
 
 	config = function()
-		local lspconfig = require("lspconfig")
 		local capabilities = require("blink.cmp").get_lsp_capabilities()
-
 		local opts = { capabilities = capabilities }
 		local servers = {
 			eslint = opts,
@@ -26,11 +26,21 @@ return {
 			terraformls = opts,
 		}
 
+		-- mason setup
+		require("mason").setup()
+		require("mason-lspconfig").setup({
+			ensure_installed = vim.tbl_keys(servers),
+			automatic_installation = true,
+		})
+
+		-- lspconfig setup
+		local lspconfig = require("lspconfig")
+
 		for lsp, opts in pairs(servers) do
 			lspconfig[lsp].setup(opts)
 		end
 
-		-- keymap setup :)
+		-- keymap setup
 		vim.keymap.set("n", "gR", "<cmd>Telescope lsp_references<CR>", { desc = "LSP references" })
 		vim.keymap.set("n", "gD", vim.lsp.buf.declaration, { desc = "Go to declaration" })
 		vim.keymap.set("n", "gd", "<cmd>Telescope lsp_definitions<CR>", { desc = "LSP definitions" })
