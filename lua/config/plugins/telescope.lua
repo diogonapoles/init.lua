@@ -3,8 +3,6 @@ return {
 	tag = "0.1.8",
 	dependencies = {
 		"nvim-lua/plenary.nvim",
-		"nvim-treesitter/nvim-treesitter",
-		"nvim-telescope/telescope-ui-select.nvim",
 		{
 			"nvim-telescope/telescope-fzf-native.nvim",
 			build = "make",
@@ -13,22 +11,23 @@ return {
 
 	config = function()
 		local set = vim.keymap.set
+		local telescope = require("telescope")
+
+		telescope.setup({
+			find_files = {
+				hidden = true,
+				theme = "ivy",
+			},
+
+			extensions = {
+				wrap_results = true,
+				fzf = {},
+			},
+		})
+		telescope.load_extension("fzf")
 
 		local builtin = require("telescope.builtin")
 		set("n", "<space>ff", builtin.find_files, { desc = "Find files on the current directory" })
 		set("n", "<space>fs", builtin.live_grep, { desc = "Find string" })
-
-		local telescope = require("telescope")
-		telescope.setup({
-			extensions = {
-				wrap_results = true,
-			},
-
-			find_files = {
-				hidden = true,
-			},
-		})
-		telescope.load_extension("fzf")
-		telescope.load_extension("ui-select")
 	end,
 }

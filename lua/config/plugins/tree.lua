@@ -1,13 +1,12 @@
 return {
 	"nvim-tree/nvim-tree.lua",
 	dependencies = {
-		"nvim-tree/nvim-web-devicons"
+		"nvim-tree/nvim-web-devicons",
 	},
 
 	config = function()
 		local tree = require("nvim-tree")
 
-		-- this is recommended
 		vim.g.loaded_netrw = 1
 		vim.g.loaded_netrwPlugin = 1
 
@@ -26,15 +25,15 @@ return {
 			renderer = {
 				indent_markers = {
 					enable = true,
-				}
+				},
 			},
 
 			view = {
 				width = 30,
 				relativenumber = true,
-			}
+			},
 		})
 
 		vim.keymap.set("n", "<leader>e", "<cmd>NvimTreeToggle<CR>", { desc = "Toggle file explorer" })
-	end
+	end,
 }
