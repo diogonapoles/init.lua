@@ -14,6 +14,7 @@ return {
 		luasnip.filetype_extend("javascript", { "jsdoc" })
 		luasnip.filetype_extend("typescript", { "tsdoc" })
 		luasnip.filetype_extend("lua", { "luadoc" })
+		luasnip.filetype_extend({ "terraform", "hcl" }, { "terraform_doc" })
 
 		require("luasnip.loaders.from_vscode").lazy_load()
 	end,

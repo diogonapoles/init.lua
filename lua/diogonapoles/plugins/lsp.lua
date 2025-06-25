@@ -7,6 +7,7 @@ return {
 		"hrsh7th/cmp-cmdline",
 		"jcha0713/cmp-tw2css",
 		"hrsh7th/nvim-cmp",
+		"nvim-telescope/telescope.nvim",
 	},
 
 	config = function()
@@ -39,6 +40,7 @@ return {
 				})
 			end,
 		})
+        lspconfig.terraformls.setup({})
 
 		local luasnip = require("luasnip")
 		vim.api.nvim_set_hl(0, "CmpNormal", {})
@@ -127,7 +129,15 @@ return {
 		vim.api.nvim_create_autocmd("LspAttach", {
 			desc = "LSP actions",
 			callback = function(event)
-				vim.keymap.set("n", "<leader>lr", vim.lsp.buf.rename, { buffer = event.buf, desc = "Rename symbol" })
+				local builtin = require("telescope.builtin")
+				vim.keymap.set("n", "<leader>lrn", vim.lsp.buf.rename, { buffer = event.buf, desc = "Rename symbol" })
+
+				vim.keymap.set(
+					"n",
+					"<leader>lrf",
+					builtin.lsp_references,
+					{ buffer = event.buf, desc = "View references for Word under cursor" }
+				)
 
 				vim.keymap.set(
 					"n",
@@ -138,9 +148,30 @@ return {
 
 				vim.keymap.set(
 					"n",
+					"<leader>ld",
+					builtin.diagnostics,
+					{ buffer = event.buf, desc = "View Buffer Diagnostics" }
+				)
+
+				vim.keymap.set(
+					"n",
 					"<leader>lgd",
-					vim.lsp.buf.definition,
-					{ buffer = event.buf, desc = "Goto symbol definition" }
+					builtin.lsp_definitions,
+					{ buffer = event.buf, desc = "Goto Definitions" }
+				)
+
+				vim.keymap.set(
+					"n",
+					"<leader>lic",
+					builtin.lsp_incoming_calls,
+					{ buffer = event.buf, desc = "View Incoming Calls" }
+				)
+
+				vim.keymap.set(
+					"n",
+					"<leader>loc",
+					builtin.lsp_outgoing_calls,
+					{ buffer = event.buf, desc = "View Outgoing Calls" }
 				)
 
 				vim.keymap.set(
@@ -150,12 +181,12 @@ return {
 					{ buffer = event.buf, desc = "View code actions" }
 				)
 
-                vim.keymap.set(
-                    "n",
-                    "<leader>li",
-                    vim.lsp.buf.implementation,
-					{ buffer = event.buf, desc = "View Implementations" }
-                )
+				vim.keymap.set(
+					"n",
+					"<leader>lgi",
+					builtin.lsp_implementations,
+					{ buffer = event.buf, desc = "Goto Implementations" }
+				)
 
 				-- vim.keymap.set("n", "<leader>le", function()
 				-- 	local picker = require("util.picker")({
