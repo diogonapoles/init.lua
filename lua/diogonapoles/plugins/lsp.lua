@@ -1,250 +1,237 @@
 return {
-	"neovim/nvim-lspconfig",
-	dependencies = {
-		"hrsh7th/cmp-nvim-lsp",
-		"hrsh7th/cmp-buffer",
-		"hrsh7th/cmp-path",
-		"hrsh7th/cmp-cmdline",
-		"jcha0713/cmp-tw2css",
-		"hrsh7th/nvim-cmp",
-		"nvim-telescope/telescope.nvim",
-	},
+  {
+    'folke/lazydev.nvim',
+    ft = 'lua',
+    opts = {
+      library = {
+        { path = '${3rd}/luv/library', words = { 'vim%.uv' } },
+      },
+    },
+  },
 
-	config = function()
-		local lspconfig = require("lspconfig")
+  {
+    'neovim/nvim-lspconfig',
+    dependencies = {
+      -- mason must be loaded before its dependents
+      { 'mason-org/mason.nvim', opts = {} },
+      'mason-org/mason-lspconfig.nvim',
+      'WhoIsSethDaniel/mason-tool-installer.nvim',
 
-		vim.diagnostic.config({
-			float = { border = "rounded" },
-		})
+      -- status updates
+      { 'j-hui/fidget.nvim', opts = {} },
 
-		local cmp = require("cmp")
-		local cmp_lsp = require("cmp_nvim_lsp")
-		lspconfig.capabilities = vim.tbl_deep_extend(
-			"force",
-			{},
-			vim.lsp.protocol.make_client_capabilities(),
-			cmp_lsp.default_capabilities()
-		)
+      -- extra capabilities
+      'saghen/blink.cmp',
+    },
+    config = function()
+      vim.api.nvim_create_autocmd('LspAttach', {
+        group = vim.api.nvim_create_augroup('lsp-attach', { clear = true }),
+        callback = function(event)
+          local map = function(keys, func, desc, mode)
+            mode = mode or 'n'
+            vim.keymap.set(mode, keys, func, { buffer = event.buf, desc = 'LSP: ' .. desc })
+          end
 
-		lspconfig.lua_ls.setup(require("diogonapoles.lspconfig.lua_ls"))
-		lspconfig.html.setup({})
-		lspconfig.cssls.setup({})
-		lspconfig.jsonls.setup(require("diogonapoles.lspconfig.json"))
-		lspconfig.tailwindcss.setup({})
-		lspconfig.ts_ls.setup(require("diogonapoles.lspconfig.js"))
-		lspconfig.eslint.setup({
-			on_attach = function(client, bufnr)
-				vim.api.nvim_create_autocmd("BufWritePre", {
-					buffer = bufnr,
-					command = "EslintFixAll",
-				})
-			end,
-		})
-        lspconfig.terraformls.setup({})
+          map('grn', vim.lsp.buf.rename, '[R]e[n]ame')
+          map('gra', vim.lsp.buf.code_action, '[G]oto Code [A]ction', { 'n', 'x' })
+          map('grr', require('telescope.builtin').lsp_references, '[G]oto [R]eferences')
+          map('gri', require('telescope.builtin').lsp_implementations, '[G]oto [I]mplementation')
+          map('grd', require('telescope.builtin').lsp_definitions, '[G]oto [D]efinition')
+          map('grD', vim.lsp.buf.declaration, '[G]oto [D]eclaration')
 
-		local luasnip = require("luasnip")
-		vim.api.nvim_set_hl(0, "CmpNormal", {})
+          map('gO', require('telescope.builtin').lsp_document_symbols, 'Open Document Symbols')
+          map('gW', require('telescope.builtin').lsp_dynamic_workspace_symbols, 'Open Workspace Symbols')
+          map('grt', require('telescope.builtin').lsp_type_definitions, '[G]oto [T]ype Definition')
 
-		cmp.setup({
-			snippet = {
-				expand = function(args)
-					luasnip.lsp_expand(args.body)
-				end,
-			},
+          ---@param client vim.lsp.Client
+          ---@param method vim.lsp.protocol.Method
+          ---@param bufnr? integer some lsp support methods only in specific files
+          ---@return boolean
+          local function client_supports_method(client, method, bufnr)
+            if vim.fn.has 'nvim-0.11' == 1 then
+              return client:supports_method(method, bufnr)
+            else
+              return client.supports_method(method, { bufnr = bufnr })
+            end
+          end
 
-			mapping = cmp.mapping.preset.insert({
-				["<C-k>"] = cmp.mapping.scroll_docs(-4),
-				["<C-j>"] = cmp.mapping.scroll_docs(4),
+          if client and client_supports_method(client, vim.lsp.protocol.Methods.textDocument_inlayHint, event.buf) then
+            map('<leader>th', function()
+              vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled { bufnr = event.buf })
+            end, '[T]oggle Inlay [H]ints')
+          end
+        end,
+      })
 
-				["<C-e>"] = cmp.mapping.abort(),
-				["<C-Space>"] = cmp.mapping.complete(),
+      vim.diagnostic.config {
+        severity_sort = true,
+        float = { border = 'rounded', source = 'if_many' },
+        underline = { severity = vim.diagnostic.severity.ERROR },
+        signs = vim.g.have_nerd_font and {
+          text = {
+            [vim.diagnostic.severity.ERROR] = '󰅚 ',
+            [vim.diagnostic.severity.WARN] = '󰀪 ',
+            [vim.diagnostic.severity.INFO] = '󰋽 ',
+            [vim.diagnostic.severity.HINT] = '󰌶 ',
+          },
+        } or {},
+        virtual_text = {
+          source = 'if_many',
+          spacing = 2,
+          format = function(diagnostic)
+            local diagnostic_message = {
+              [vim.diagnostic.severity.ERROR] = diagnostic.message,
+              [vim.diagnostic.severity.WARN] = diagnostic.message,
+              [vim.diagnostic.severity.INFO] = diagnostic.message,
+              [vim.diagnostic.severity.HINT] = diagnostic.message,
+            }
+            return diagnostic_message[diagnostic.severity]
+          end,
+        },
+      }
 
-				["<CR>"] = cmp.mapping.confirm({
-					behavior = cmp.ConfirmBehavior.Replace,
-					select = true,
-				}),
+      local capabilities = require('blink.cmp').get_lsp_capabilities()
 
-				["<Tab>"] = cmp.mapping(function(fallback)
-					if cmp.visible() then
-						cmp.select_next_item()
-					elseif luasnip.locally_jumpable(1) then
-						luasnip.jump(1)
-					else
-						fallback()
-					end
-				end, { "i", "s" }),
+      --  - cmd (table): override the default command used to start the server
+      --  - filetypes (table): override the default list of associated filetypes for the server
+      --  - capabilities (table): override fields in capabilities. Can be used to disable certain LSP features.
+      --  - settings (table): override the default settings passed when initializing the server.
+      local servers = {
+        terraformls = {},
+        ts_ls = {},
+        lua_ls = {
+          settings = {
+            Lua = {
+              completion = {
+                callSnippet = 'Replace',
+              },
+            },
+          },
+        },
+      }
 
-				["<S-Tab>"] = cmp.mapping(function(fallback)
-					if cmp.visible() then
-						cmp.select_prev_item()
-					elseif luasnip.jumpable(-1) then
-						luasnip.jump(-1)
-					else
-						fallback()
-					end
-				end, { "i", "s" }),
-			}),
+      local ensure_installed = vim.tbl_keys(servers or {})
+      vim.list_extend(ensure_installed, {
+        -- Linters
+        'vale', -- linter for markdown
+        'hadolint', -- linter for dockerfile
+        'tflint', -- linter for terraform
+        'jsonlint', -- linter for json
 
-			window = {
-				completion = {
-					scrollbar = false,
-					border = "rounded",
-					winhighlight = "Normal:CmpNormal",
-				},
-				documentation = {
-					scrollbar = false,
-					border = "rounded",
-					winhighlight = "Normal:CmpNormal",
-				},
-			},
+        -- Formatters
+        'stylua', -- format Lua code
+      })
 
-			sources = cmp.config.sources({
-				{ name = "nvim_lsp" },
-				{ name = "luasnip" },
-			}, {
-				{ name = "path" },
-				{ name = "buffer" },
-			}),
+      require('mason-tool-installer').setup { ensure_installed = ensure_installed }
 
-			experimental = {
-				ghost_text = true,
-			},
-		})
+      require('mason-lspconfig').setup {
+        ensure_installed = {}, -- mason tool installer is used instead
+        automatic_installation = false,
+        handlers = {
+          function(server_name)
+            local server = servers[server_name] or {}
+            server.capabilities = vim.tbl_deep_extend('force', {}, capabilities, server.capabilities or {})
+            require('lspconfig')[server_name].setup(server)
+          end,
+        },
+      }
+    end,
+  },
 
-		cmp.setup.cmdline(":", {
-			mapping = cmp.mapping.preset.cmdline(),
-			sources = {
-				{ name = "cmdline" },
-				{ name = "path" },
-			},
-		})
+  -- autoformat
+  {
+    'stevearc/conform.nvim',
+    event = { 'BufWritePre' },
+    cmd = { 'ConformInfo' },
+    keys = {
+      {
+        '<leader>f',
+        function()
+          require('conform').format { async = true, lsp_format = 'fallback' }
+        end,
+        mode = '',
+        desc = '[F]ormat buffer',
+      },
+    },
+    opts = {
+      notify_on_error = false,
+      format_on_save = function(bufnr)
+        local disable_filetypes = { c = true, cpp = true }
+        if disable_filetypes[vim.bo[bufnr].filetype] then
+          return nil
+        else
+          return {
+            timeout_ms = 500,
+            lsp_format = 'fallback',
+          }
+        end
+      end,
+      formatters_by_ft = {
+        lua = { 'stylua' },
+        javascript = { 'prettierd', 'prettier', stop_after_first = true },
+      },
+    },
+  },
 
-		cmp.setup.cmdline({ "/", "?" }, {
-			mapping = cmp.mapping.preset.cmdline(),
-			sources = {
-				{ name = "buffer" },
-			},
-		})
+  -- autocompletion
+  {
+    'saghen/blink.cmp',
+    event = 'VimEnter',
+    version = '1.*',
+    dependencies = {
+      -- Snippet Engine
+      {
+        'L3MON4D3/LuaSnip',
+        version = '2.*',
+        build = (function()
+          if vim.fn.has 'win32' == 1 or vim.fn.executable 'make' == 0 then
+            return
+          end
+          return 'make install_jsregexp'
+        end)(),
+        dependencies = {
+          {
+            'rafamadriz/friendly-snippets',
+            config = function()
+              require('luasnip.loaders.from_vscode').lazy_load()
+            end,
+          },
+        },
+        opts = {},
+      },
+      'folke/lazydev.nvim',
+    },
+    --- @module 'blink.cmp'
+    --- @type blink.cmp.Config
+    opts = {
+      keymap = {
+        -- <c-y> to accept ([y]es) the completion.
+        -- <tab>/<s-tab>: move to right/left of your snippet expansion
+        -- <c-space>: Open menu or open docs if already open
+        -- <c-n>/<c-p> or <up>/<down>: Select next/previous item
+        -- <c-e>: Hide menu
+        -- <c-k>: Toggle signature help
+        preset = 'default',
+      },
 
-		vim.api.nvim_create_autocmd("LspAttach", {
-			desc = "LSP actions",
-			callback = function(event)
-				local builtin = require("telescope.builtin")
-				vim.keymap.set("n", "<leader>lrn", vim.lsp.buf.rename, { buffer = event.buf, desc = "Rename symbol" })
+      appearance = {
+        nerd_font_variant = 'mono',
+      },
 
-				vim.keymap.set(
-					"n",
-					"<leader>lrf",
-					builtin.lsp_references,
-					{ buffer = event.buf, desc = "View references for Word under cursor" }
-				)
+      completion = {
+        documentation = { auto_show = true, auto_show_delay_ms = 500 },
+      },
 
-				vim.keymap.set(
-					"n",
-					"<leader>lh",
-					vim.lsp.buf.hover,
-					{ buffer = event.buf, desc = "Display symbol information" }
-				)
+      sources = {
+        default = { 'lsp', 'path', 'snippets', 'lazydev' },
+        providers = {
+          lazydev = { module = 'lazydev.integrations.blink', score_offset = 100 },
+        },
+      },
 
-				vim.keymap.set(
-					"n",
-					"<leader>ld",
-					builtin.diagnostics,
-					{ buffer = event.buf, desc = "View Buffer Diagnostics" }
-				)
-
-				vim.keymap.set(
-					"n",
-					"<leader>lgd",
-					builtin.lsp_definitions,
-					{ buffer = event.buf, desc = "Goto Definitions" }
-				)
-
-				vim.keymap.set(
-					"n",
-					"<leader>lic",
-					builtin.lsp_incoming_calls,
-					{ buffer = event.buf, desc = "View Incoming Calls" }
-				)
-
-				vim.keymap.set(
-					"n",
-					"<leader>loc",
-					builtin.lsp_outgoing_calls,
-					{ buffer = event.buf, desc = "View Outgoing Calls" }
-				)
-
-				vim.keymap.set(
-					{ "n", "v" },
-					"<leader>la",
-					vim.lsp.buf.code_action,
-					{ buffer = event.buf, desc = "View code actions" }
-				)
-
-				vim.keymap.set(
-					"n",
-					"<leader>lgi",
-					builtin.lsp_implementations,
-					{ buffer = event.buf, desc = "Goto Implementations" }
-				)
-
-				-- vim.keymap.set("n", "<leader>le", function()
-				-- 	local picker = require("util.picker")({
-				-- 		prompt = "LSP extra actions",
-				-- 		items = {
-				-- 			{
-				-- 				name = " Goto Declaration",
-				-- 				action = vim.lsp.buf.declaration,
-				-- 			},
-				-- 			{
-				-- 				name = " Goto Type Definition",
-				-- 				action = vim.lsp.buf.type_definition,
-				-- 			},
-				-- 			{
-				-- 				name = " Incoming Calls",
-				-- 				action = vim.lsp.buf.incoming_calls,
-				-- 			},
-				-- 			{
-				-- 				name = "󰉺 View Implementations",
-				-- 				action = vim.lsp.buf.implementation,
-				-- 			},
-				-- 			{
-				-- 				name = "⮌ View References",
-				-- 				action = vim.lsp.buf.references,
-				-- 			},
-				-- 			{
-				-- 				name = "✚ Diagnostics to qflist",
-				-- 				action = vim.diagnostic.setqflist,
-				-- 			},
-				-- 			{
-				-- 				name = "󰡱 Toggle Inlay-Hints",
-				-- 				action = function()
-				-- 					local filter = { bufnr = bufnr }
-				-- 					if vim.lsp.inlay_hint.is_enabled(filter) then
-				-- 						vim.lsp.inlay_hint.enable(false, filter)
-				-- 					else
-				-- 						vim.lsp.inlay_hint.enable(true, filter)
-				-- 					end
-				-- 				end,
-				-- 			},
-				-- 		},
-				-- 		config = {
-				-- 			telescope = {
-				-- 				theme = "dropdown",
-				-- 			},
-				-- 		},
-				-- 	})
-				-- 	return picker()
-				-- end, { desc = "LSP extra actions" })
-
-				-- vim.keymap.set("n", "gD", "<cmd>lua vim.lsp.buf.declaration()<cr>", opts)
-				-- vim.keymap.set("n", "gi", "<cmd>lua vim.lsp.buf.implementation()<cr>", opts)
-				-- vim.keymap.set("n", "go", "<cmd>lua vim.lsp.buf.type_definition()<cr>", opts)
-				-- vim.keymap.set("n", "gr", "<cmd>lua vim.lsp.buf.references()<cr>", opts)
-				-- vim.keymap.set("n", "gs", "<cmd>lua vim.lsp.buf.signature_help()<cr>", opts)
-				-- vim.keymap.set("n", "<F2>", "<cmd>lua vim.lsp.buf.rename()<cr>", opts)
-				-- vim.keymap.set({ "n", "x" }, "<F3>", "<cmd>lua vim.lsp.buf.format({async = true})<cr>", opts)
-			end,
-		})
-	end,
+      snippets = { preset = 'luasnip' },
+      fuzzy = { implementation = 'lua' },
+      signature = { enabled = true },
+    },
+  },
 }
