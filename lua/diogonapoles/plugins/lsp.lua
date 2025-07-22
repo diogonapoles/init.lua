@@ -108,6 +108,9 @@ return {
             },
           },
         },
+        gh_actions_ls = {
+          filetypes = { 'yaml.github' },
+        },
       }
 
       local ensure_installed = vim.tbl_keys(servers or {})
@@ -117,9 +120,11 @@ return {
         'hadolint', -- linter for dockerfile
         'tflint', -- linter for terraform
         'jsonlint', -- linter for json
+        'eslint', -- linter for js/ts
 
         -- Formatters
         'stylua', -- format Lua code
+        'prettier' -- format for js/ts/json
       })
 
       require('mason-tool-installer').setup { ensure_installed = ensure_installed }
@@ -170,6 +175,7 @@ return {
         lua = { 'stylua' },
         javascript = { 'prettierd', 'prettier', stop_after_first = true },
         typescript = { 'prettierd', 'prettier', stop_after_first = true },
+        json = { 'prettierd', 'prettier', stop_after_first = true },
       },
     },
   },
