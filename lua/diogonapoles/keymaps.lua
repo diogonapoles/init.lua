@@ -2,6 +2,13 @@ vim.keymap.set('n', '<Esc>', '<cmd>nohlsearch<CR>')
 vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagnostic [Q]uickfix list' })
 vim.keymap.set('t', '<Esc><Esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' })
 
+-- select all
+vim.keymap.set('n', '<C-a>', 'gg<S-v>G')
+
+-- move lines
+vim.keymap.set('x', 'J', ":m '>+1<CR>gv=gv", { desc = 'Move line up' })
+vim.keymap.set('x', 'K', ":m '<-2<CR>gv=gv", { desc = 'Move line down' })
+
 -- move lines
 vim.keymap.set('x', 'J', ":m '>+1<CR>gv=gv", { desc = 'Move line up' })
 vim.keymap.set('x', 'K', ":m '<-2<CR>gv=gv", { desc = 'Move line down' })
